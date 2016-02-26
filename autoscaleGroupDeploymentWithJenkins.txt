@@ -1,0 +1,19 @@
+#!/bin/bash
+
+echo ${TARGET_SERVER}
+echo "Setting autoscale group ${AutoScaleGroupName}"
+aws autoscaling update-auto-scaling-group --auto-scaling-group-name ${AutoScaleGroupName} --desired-capacity 0  --min-size 0
+echo "${versionNum}" > /data/jenkins/depVer/${TARGET_SERVER}/${COMPONENT}/index.html
+sleep 50 
+aws autoscaling update-auto-scaling-group --auto-scaling-group-name ${AutoScaleGroupName} --desired-capacity 1  --min-size 1 
+
+echo "New machine group initiated"
+
+#####################################################################################
+#   Removing cache in CloudFront
+#####################################################################################
+
+echo "Invalidating cache From CDN.<domain>.com"
+
+aws cloudfront create-invalidation --distribution-id XXXXXXXXXXXXX --invalidation-batch "{ \"Paths\": { \"Quantity\": 3, \"Items\": [\"/resources/*\",\"/logo/*\", \"/*\"]  }, \"CallerReference\": \"De_invalidation_"$(date +%d-%m-%y-%H-%M-%S)"\" }"
+
