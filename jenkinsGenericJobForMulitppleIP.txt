@@ -1,0 +1,62 @@
+#!/bin/bash
+
+source /data/jenkins/${Component}_env.properties
+
+TOTAL_SERVER_STR=${TARGET_SERVER}_ip_total
+Total_Server=${!TOTAL_SERVER_STR}
+
+echo "Total Servers for ${COMPONENT} are ${Total_Server}"
+count=0
+
+while [ $count -lt ${Total_Server} ]
+do
+  
+TARGET_SERVER_IP_STR=${TARGET_SERVER}_ip_${count}
+
+TARGET_SERVER_IP=${!TARGET_SERVER_IP_STR}
+
+TARGET_SERVER_PORT_STR=${TARGET_SERVER}_port_${count}
+TARGET_SERVER_PORT=${!TARGET_SERVER_PORT_STR}
+
+
+echo "ssh connection string is ${TARGET_SERVER_IP} : ${TARGET_SERVER_PORT}"
+
+ssh -p ${TARGET_SERVER_PORT} ${USERNAME}@${TARGET_SERVER_IP} "release/stopServer.sh ${COMPONENT}-tomcat"
+ssh -p ${TARGET_SERVER_PORT} ${USERNAME}@${TARGET_SERVER_IP} "release/deployWebApp.sh ${VERSION} ${COMPONENT}"
+ssh -p ${TARGET_SERVER_PORT} ${USERNAME}@${TARGET_SERVER_IP} "release/startServer.sh ${COMPONENT}-tomcat"
+
+count=`expr $count + 1`
+done
+# For maintaing the newest version on jenkins.
+echo "${versionNum}" > /data/jenkins/depVer/${TARGET_SERVER}/${COMPONENT}/index.html
+
+#############################################################################################
+# Component Properties file should be like this
+###########################################################################################
+##########################
+####  Beta IP's ######
+##########################
+
+beta_ip_total=2
+
+beta_ip_0=54.16.xxx.xxx
+beta_port_0=9009
+
+beta_ip_1=54.16.xxx.xxx
+beta_port_1=9009
+
+
+##########################
+####  Production IP's ####
+##########################
+
+prod_ip_total=2
+
+prod_ip_0=20.xx.xxx.xx
+prod_port_0=22
+
+prod_ip_1=20.xx.xxx.xx
+prod_port_1=22
+
+
+
