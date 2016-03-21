@@ -1,5 +1,5 @@
 #!/bin/sh
-count=`perl /data/autoscaleContoller/app/getCountForQueue.pl proctoring`
+count=`perl /XXXX/XXXXXXXXXXX/app/getCountForQueue.pl <Queue_Name>`
 totalReq=`expr $count / 250`
 echo "------------------------------------------"
 echo `date`
@@ -7,7 +7,6 @@ echo "Total queue Size : $count"
 totalReq=`expr $totalReq + 1`
 ## If it is between morning 8 to evening 8 , minimum elements are 2 else minimum elements is 1
 hour=$(date +%H)
-
 if [ "$hour" -lt 20 -a "$hour" -ge 8 ]; then
         if [ $totalReq -lt 2 ];
         then
