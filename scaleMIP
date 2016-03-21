@@ -1,0 +1,26 @@
+#!/bin/sh
+count=`perl /data/autoscaleContoller/app/getCountForQueue.pl proctoring`
+totalReq=`expr $count / 250`
+echo "------------------------------------------"
+echo `date`
+echo "Total queue Size : $count"
+totalReq=`expr $totalReq + 1`
+## If it is between morning 8 to evening 8 , minimum elements are 2 else minimum elements is 1
+hour=$(date +%H)
+
+if [ "$hour" -lt 20 -a "$hour" -ge 8 ]; then
+        if [ $totalReq -lt 2 ];
+        then
+                totalReq=2;
+        fi
+fi
+echo "Total instance required $totalReq"
+curInstance=`aws autoscaling describe-auto-scaling-groups --auto-scaling-group-name my-auto-scaling-group  "<GROUP_NAME>" | jq '.AutoScalingGroups[0].Instances | length'`
+echo "Current instance $curInstance"
+if [ "$totalReq" -ne "$curInstance" ];
+then
+        aws  autoscaling update-auto-scaling-group --auto-scaling-group-name "<GROUP_NAME>" --min-size $totalReq --desired-capacity $totalReq
+else
+        echo " No need to fire request"
+fi
+
