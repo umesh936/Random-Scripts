@@ -1,0 +1,22 @@
+#/usr/bin/python
+from elasticsearch import Elasticsearch
+import json
+import datetime
+
+if __name__ == '__main__': 
+    es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
+    res = es.search(index="loan", doc_type="loan", body={"size" : 10000,"query": {"exists": {"field": "emiScheduleDateList"}}})
+    print("%d documents found:" % res['hits']['total'])
+    for  doc in res['hits']['hits']:
+    	if not isinstance(doc['_source']['emiScheduleDateList'] , basestring):
+        	print("%s) %s" % (doc['_id'], doc['_source']['emiScheduleDateList']))
+        else:
+        	print("%s) %s" % (doc['_id'], "String"))
+        	emiScheduleDateListStr = doc['_source']['emiScheduleDateList'].split(",")
+        	print(emiScheduleDateListStr)
+        	emiScheduleDateList = []
+        	for date1 in emiScheduleDateListStr:
+        		emiScheduleDateList.append(int(datetime.datetime.strptime(date1.split(".")[0], '%Y-%m-%d %H:%M:%S').strftime("%s")))
+        	print(emiScheduleDateList)
+        	es.update(index='loan',doc_type='loan',id=doc['_id'],
+                body={"doc": {"emiScheduleDateList": emiScheduleDateList }})
