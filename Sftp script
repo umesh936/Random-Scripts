@@ -1,0 +1,41 @@
+#!/bin/sh
+
+##########################################
+#
+# Sending Email from file stroed in sftp 
+#
+###########################################
+
+echo "running on `date`"
+cd /home/ubuntu/emailer/1
+
+lftp -p <port> sftp://<user>:<password>@<ip> -e "cd /<path_on_sftp>; mget *_EML.csv; bye"
+lftp -p <port> sftp://<user>:<password>@<ip> -e "cd /<path_on_sftp>; mget *_MSG.html; bye"
+lftp -p <port> sftp://<user>:<password>@<ip> -e "cd /<path_on_sftp>; mget *_SUB.txt; bye"
+
+response=`curl --write-out "%{http_code}\n" --silent --output /dev/null "http://localhost:11000/email/send/1"`
+if [ 500 -eq $response ]; then
+        echo "Error occured $response, exiting from here"
+        exit 0
+fi
+
+for i in `ls *.csv`;
+do
+cmd="cd /<path_on_sftp>; mv $i $i.end; bye"
+echo $cmd
+lftp -p <port> sftp://<user>:<password>@<ip> -e "$cmd"
+done
+
+for i in `ls *.txt`;
+do
+cmd="cd /<path_on_sftp>s; mv $i $i.end; bye"
+echo $cmd
+lftp -p <port> sftp://<user>:<password>@<ip> -e "$cmd"
+done
+
+for i in `ls *.html`;
+do
+cmd="cd /<path_on_sftp>; mv $i $i.end; bye"
+echo $cmd
+lftp -p <port> sftp://<user>:<password>@<ip> -e "$cmd"
+done
