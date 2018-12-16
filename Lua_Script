@@ -1,0 +1,107 @@
+-- ----------------------------------------------------------------------
+-- ---------------------------------------------------------------------
+--  Lua Script to convert Basic Auth header to JWT authrization header.
+-- ----------------------------------------------------------------------
+-- ----------------------------------------------------------------------
+
+
+-- ------------------------------
+--  Function to split the String
+-- ------------------------------
+
+function mysplit(inputstr, sep)
+        if sep == nil then
+                sep = "%s"
+        end
+        local t={} ; i=1
+        for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+                t[i] = str
+                i = i + 1
+        end
+        return t
+end
+
+-- -------------------------------------------
+--  Function to extract header from request
+-- -------------------------------------------
+
+function extract_params()
+  local params = {}
+  local header_params = ngx.req.get_headers()
+
+  params.authorization = {}
+
+  if header_params['Authorization'] then
+    local authorizationParams_temp = header_params['Authorization']
+    local authorizationParams = mysplit(authorizationParams_temp," ")
+    if authorizationParams[1] == "Basic" then
+     params.authorization = mysplit(ngx.decode_base64(authorizationParams[2]),":")
+           params.client_id = params.authorization[1]
+     params.client_secret = params.authorization[2]
+    end
+   end
+  return params
+end
+
+-- --------------------------------------
+-- Get the token from the OAuth Server
+-- -------------------------------------
+function get_token(params,logger)
+  local res = {}
+  local json = require('cjson')
+
+  res = request_token(params)
+  local jsonValueOfResponse = json.decode(res.body)
+  local tokenValue=''
+  for k,v in pairs(jsonValueOfResponse) do
+     if k == "access_token" then
+        tokenValue = v
+     end
+  end
+  if res.status ~= 200 then
+    ngx.status = res.status
+    ngx.header.content_type = "application/json; charset=utf-8"
+    ngx.print(res.body)
+    ngx.exit(ngx.HTTP_FORBIDDEN)
+  else
+   set_token(tokenValue)
+  end
+end
+
+
+-- --------------------------------------------
+-- Calls the token endpoint to request a token
+-- --------------------------------------------
+function request_token(params)
+
+ local http = require ('resty.http')
+      local httpc = http.new()
+      local res, err = httpc:request_uri("http://authServer.in/connect/token", {
+        method = "POST",
+        body = "client_id=" .. params.client_id .. "&client_secret=" .. params.client_secret .."&scope=internal_services&grant_type=client_credentials"
+      })
+      if not res then
+        ngx.say("failed to request: ", err)
+        return
+      end
+  return { ["status"] = res.status, ["body"] = res.body }
+end
+
+-- -----------------------------------
+-- Rset token in the Header
+-- -----------------------------------
+function set_token(token)
+       ngx.req.set_header("Authorization", "Bearer " .. token);
+end
+
+-- ------------------------
+-- ------------------------
+-- Entry Point Started
+-- -------------------------
+-- ------------------------
+
+local headerParams = extract_params()
+
+if headerParams.client_id and headerParams.client_secret then
+   get_token(headerParams,logger)
+end
